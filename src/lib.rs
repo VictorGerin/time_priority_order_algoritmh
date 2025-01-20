@@ -16,19 +16,25 @@ struct ObjHolder<T> {
     priority: usize,
 }
 
+/**
+ * This is a reference to a user object that is wrapped in a RC & RefCell combination
+ * this is to prevent unnecessary cloning of the object
+ */
+type RefObj<T> = Rc<RefCell<ObjHolder<T>>>;
+
 enum TimedEvent<T, U> {
-    Start{time: U,reference: Rc<RefCell<ObjHolder<T>>>},
-    End{time: U,reference: Rc<RefCell<ObjHolder<T>>>},
+    Start{time: U,reference: RefObj<T>},
+    End{time: U,reference: RefObj<T>},
 }
 
-fn recreate_priority_index<T, U>(mut vec: Vec::<T>) -> Vec<Rc<RefCell<ObjHolder<T>>>>
+fn recreate_priority_index<T, U>(mut vec: Vec::<T>) -> Vec<RefObj<T>>
 where T: Timed<U> + Clone,
       U: Ord + Copy
 {
     //This sort by priority and create a new priority index to garantee priority uniqueness 
     vec.sort_by(|a,b| a.get_priority().cmp(&b.get_priority()));
 
-    //wrap the object in a Rc<RefCell<ObjHolder<T>>> to prevent unnecessary cloning
+    //wrap the object in a RefObj<T> to prevent unnecessary cloning
     vec.into_iter().enumerate().map(|(index, x)| Rc::new(RefCell::new(ObjHolder {
         obj: x,
         priority: index
@@ -36,7 +42,7 @@ where T: Timed<U> + Clone,
     .collect()
 }
 
-fn create_time_order_events<T, U>(vec: Vec<Rc<RefCell<ObjHolder<T>>>>) -> Vec<TimedEvent<T, U>>
+fn create_time_order_events<T, U>(vec: Vec<RefObj<T>>) -> Vec<TimedEvent<T, U>>
 where T: Clone + Timed<U>,
       U: Ord + Copy
 {
@@ -69,10 +75,10 @@ where T: Clone + Timed<U>,
 }
 
 //get the last element on the list
-fn get_top<T>(map: &HashMap::<usize, Rc<RefCell<ObjHolder<T>>>>, keys: &SortedList::<usize>) -> Option<(usize, Rc<RefCell<ObjHolder<T>>>)> {
+fn get_top<T>(map: &HashMap::<usize, RefObj<T>>, keys: &SortedList::<usize>) -> Option<RefObj<T>> {
     match keys.last() {
         Some(key_index) => {
-            Some((*key_index, map.get(key_index).unwrap().clone()))
+            Some(map.get(key_index).unwrap().clone())
         },
         None => None
     }
@@ -91,11 +97,11 @@ fn get_top<T>(map: &HashMap::<usize, Rc<RefCell<ObjHolder<T>>>>, keys: &SortedLi
  */
 fn process_end_case<T, U>(
     result: &mut Vec<T>,
-    temp_obj: &mut Rc<RefCell<ObjHolder<T>>>,
+    temp_obj: &mut RefObj<T>,
     sorted_list: &mut SortedList<usize>,
-    map_data: &mut HashMap<usize, Rc<RefCell<ObjHolder<T>>>>,
+    map_data: &mut HashMap<usize, RefObj<T>>,
     inter: &mut vec::IntoIter<TimedEvent<T, U>>,
-    reference: Rc<RefCell<ObjHolder<T>>>,
+    reference: RefObj<T>,
     time: U) 
 where T: Timed<U> + Clone,
       U: Ord + Copy
@@ -110,7 +116,7 @@ where T: Timed<U> + Clone,
         temp_obj.borrow_mut().obj.set_end(time);
         result.push(temp_obj.borrow().obj.clone());
 
-        if let Some((_, last_item)) = get_top(&*map_data, &*sorted_list) {
+        if let Some(last_item) = get_top(&*map_data, &*sorted_list) {
         
             *temp_obj = last_item.clone().into();
             temp_obj.borrow_mut().obj.set_start(time);
@@ -145,10 +151,10 @@ where T: Timed<U> + Clone,
  */
 fn process_start_case<T,U>(
     result: &mut Vec<T>, 
-    temp_obj: &mut Rc<RefCell<ObjHolder<T>>>, 
+    temp_obj: &mut RefObj<T>, 
     sorted_list: &mut SortedList<usize>, 
-    map_data: &mut HashMap<usize, Rc<RefCell<ObjHolder<T>>>>, 
-    reference: Rc<RefCell<ObjHolder<T>>>, 
+    map_data: &mut HashMap<usize, RefObj<T>>, 
+    reference: RefObj<T>, 
     time: U)
 where T: Timed<U> + Clone + Debug,
         U: Ord + Copy
@@ -176,7 +182,7 @@ U: Ord + Copy + Debug
         return vec;
     }
     
-    let vec: Vec<Rc<RefCell<ObjHolder<T>>>> = recreate_priority_index(vec);
+    let vec: Vec<RefObj<T>> = recreate_priority_index(vec);
 
     let vec: Vec<TimedEvent<T, U>> = create_time_order_events(vec);
 
@@ -184,11 +190,11 @@ U: Ord + Copy + Debug
     //Here is only place where the object is cloned
     let mut result: Vec<T> = Vec::<T>::new();
 
-    let mut temp_obj: Rc<RefCell<ObjHolder<T>>>;
+    let mut temp_obj: RefObj<T>;
 
     //sorted list to keep track of the keys on ordey by priorities
     let mut sorted_list = SortedList::<usize>::new();
-    let mut map_data = HashMap::<usize, Rc<RefCell<ObjHolder<T>>>>::new();
+    let mut map_data = HashMap::<usize, RefObj<T>>::new();
 
     let mut inter = vec.into_iter();
 
@@ -198,7 +204,7 @@ U: Ord + Copy + Debug
     let item = inter.next().unwrap();
 
     temp_obj = match &item {
-        TimedEvent::Start { time: _, reference } => reference,
+        TimedEvent::Start { time: _, reference} => reference,
         TimedEvent::End { time: _, reference } => reference
     }.clone();
 
