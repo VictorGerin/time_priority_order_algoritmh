@@ -16,6 +16,16 @@ struct ObjHolder<T> {
     priority: usize,
 }
 
+impl<T> ObjHolder<T> {
+    fn new(data: (usize, T)) -> RefObj<T> {
+        let (priority, obj) = data;
+        Rc::new(RefCell::new(Self {
+            obj,
+            priority,
+        }))
+    }
+}
+
 /**
  * This is a reference to a user object that is wrapped in a RC & RefCell combination
  * this is to prevent unnecessary cloning of the object
@@ -35,11 +45,7 @@ where T: Timed<U> + Clone,
     vec.sort_by(|a,b| a.get_priority().cmp(&b.get_priority()));
 
     //wrap the object in a RefObj<T> to prevent unnecessary cloning
-    vec.into_iter().enumerate().map(|(index, x)| Rc::new(RefCell::new(ObjHolder {
-        obj: x,
-        priority: index
-    })))
-    .collect()
+    vec.into_iter().enumerate().map(ObjHolder::new).collect()
 }
 
 fn create_time_order_events<T, U>(vec: Vec<RefObj<T>>) -> Vec<TimedEvent<T, U>>
