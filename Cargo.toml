@@ -1,5 +1,6 @@
 [package]
 name = "time_priority_order_algoritmh"
+description = "This is an algorithm create a cronogram of action sorted by time of occurrence time avoiding time colisions."
 version = "0.1.0"
 edition = "2021"
 license-file = "LICENSE"
@@ -7,9 +8,16 @@ exclude = [
     ".gitignore",
     ".vscode/*"
 ]
+authors = [
+    "Victor Gerin de Lacerda <gerinlacerda@gmail.com>"
+]
+readme = "README.md"
+repository = "https://github.com/VictorGerin/time_priority_order_algoritmh"
+keywords = ["time", "priority", "order", "algoritmh"]
+categories = ["algorithms"]
 
 [dependencies]
-sortedlist-rs = { version = "0.2.3"}
+sortedlist-rs = "^0.2.3"
 
 [dev-dependencies]
 rand = "0.8.5"
