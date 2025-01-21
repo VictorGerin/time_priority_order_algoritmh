@@ -1,4 +1,4 @@
-pub mod test;
+mod test_example;
 
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc, vec};
 
@@ -41,6 +41,8 @@ enum TimedEvent<T, U> {
     End{time: U,reference: RefObj<T>},
 }
 
+/// recreate the priority index to garantee priority uniqueness
+/// this is done by sorting the list by T::Ord and creating a new priority from the index result
 fn recreate_priority_index<T, U>(mut vec: Vec::<T>) -> Vec<RefObj<T>>
 where T: Timed<U> + Clone,
       U: Ord + Copy
@@ -113,8 +115,8 @@ fn process_end_case<T, U>(
     inter: &mut vec::IntoIter<TimedEvent<T, U>>,
     reference: RefObj<T>,
     time: U) 
-where T: Timed<U> + Clone + Debug,
-      U: Ord + Copy + Debug
+where T: Timed<U> + Clone,
+      U: Ord + Copy
 {
     if let Ok(index) = sorted_list.binary_search(&reference.borrow().priority) {
         sorted_list.remove(index);
@@ -134,7 +136,6 @@ where T: Timed<U> + Clone + Debug,
         } else if let Some(item) = inter.next() {
             //if finised the conflict and have more elements
 
-            println!("item {:?}\t{:?}", item, sorted_list);
             match item {
                 TimedEvent::Start { reference , time } => {
                     *temp_obj = reference.clone();
@@ -142,9 +143,9 @@ where T: Timed<U> + Clone + Debug,
                     
                     map_data.insert(temp_obj.borrow().priority, temp_obj.clone());
 
+
                     //looks like sorted_list has a bug when all elements is removed
                     //For that a new list is created when the sorted list is empty
-                    *sorted_list = SortedList::new();
                     sorted_list.insert(temp_obj.borrow().priority);
                 },
                 _ => {
@@ -174,8 +175,8 @@ fn process_start_case<T,U>(
     map_data: &mut HashMap<usize, RefObj<T>>, 
     reference: RefObj<T>, 
     time: U)
-where T: Timed<U> + Clone + Debug,
-        U: Ord + Copy + Debug
+where T: Timed<U> + Clone,
+        U: Ord + Copy
 {
     map_data.insert(reference.borrow().priority, reference.clone());
     sorted_list.insert(reference.borrow().priority);
@@ -191,8 +192,8 @@ where T: Timed<U> + Clone + Debug,
 
 
 pub fn time_order_by_priority<T, U>(vec: Vec::<T>) -> Vec::<T>
-where T: Timed<U> + Clone + Debug,
-U: Ord + Copy + Debug
+where T: Timed<U> + Clone,
+U: Ord + Copy
 {
 
     //trivial case not worth pass through the algorithm
@@ -231,13 +232,12 @@ U: Ord + Copy + Debug
         TimedEvent::End { time, reference: _ } => time
     });
 
-    println!("item {:?}\t{:?}", item, sorted_list);
     map_data.insert(temp_obj.borrow().priority, temp_obj.clone());
     sorted_list.insert(temp_obj.borrow().priority);
     
 
     while let Some(item) = inter.next() {
-        println!("item {:?}\t{:?}", item, sorted_list);
+
         match item {
             TimedEvent::Start { reference , time } => {
                 process_start_case(&mut result, &mut temp_obj, &mut sorted_list, &mut map_data, reference, time); 
@@ -249,4 +249,97 @@ U: Ord + Copy + Debug
     }
 
     result
+}
+
+
+#[cfg(test)]
+mod test {
+    use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+
+    use crate::{recreate_priority_index, Timed};
+
+    #[test]
+    fn test_recreate_priority_index() {
+
+        #[derive(Clone, Debug)]
+        struct Obj {
+            start: i32,
+            end: i32,
+            priority: i32,
+            other: i32,
+        }
+
+        impl Timed<i32> for Obj {
+            fn get_start(&self) -> i32 {
+                self.start
+            }
+            fn get_end(&self) -> i32 {
+                self.end
+            }
+            fn set_start(&mut self, time: i32) {
+                self.start = time;
+            }
+            fn set_end(&mut self, time: i32) {
+                self.end = time;
+            }
+        }
+
+        impl PartialEq for Obj {
+            fn eq(&self, other: &Self) -> bool {
+                self.priority == other.priority
+            }
+        }
+
+        impl PartialOrd for Obj {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                if self.priority == other.priority {
+                    return Some(self.other.cmp(&other.other))
+                }
+                Some(self.priority.cmp(&other.priority))
+            }
+        }
+
+        let mut vec = vec![
+            Obj { start: 1, end: 2, priority: 20, other: 0 },
+            Obj { start: 1, end: 2, priority: 40, other: 0 },
+            Obj { start: 0, end: 2, priority: 10, other: 0 },
+            Obj { start: 0, end: 2, priority: 10, other: 1 },
+            Obj { start: 1, end: 2, priority: 30, other: 0 },
+        ];
+        let options = [
+            std::cmp::Ordering::Less,
+            std::cmp::Ordering::Equal,
+            std::cmp::Ordering::Greater,
+        ];
+        let mut rng = StdRng::seed_from_u64(42);
+        vec.sort_by(|_,_| *options.choose(&mut rng).unwrap());
+
+        let vec = recreate_priority_index(vec);
+        assert_eq!(vec.len(), 5);
+
+        let mut vec = vec.iter();
+        
+        let item = vec.next().unwrap();
+        assert_eq!(item.borrow().obj.priority, 10);
+        assert_eq!(item.borrow().priority, 1);
+        assert_eq!(item.borrow().obj.other, 0);
+        
+        let item = vec.next().unwrap();
+        assert_eq!(item.borrow().obj.priority, 10);
+        assert_eq!(item.borrow().priority, 2);
+        assert_eq!(item.borrow().obj.other, 1);
+
+        let item = vec.next().unwrap();
+        assert_eq!(item.borrow().obj.priority, 20);
+        assert_eq!(item.borrow().priority, 3);
+
+        let item = vec.next().unwrap();
+        assert_eq!(item.borrow().obj.priority, 30);
+        assert_eq!(item.borrow().priority, 4);
+
+        let item = vec.next().unwrap();
+        assert_eq!(item.borrow().obj.priority, 40);
+        assert_eq!(item.borrow().priority, 5);
+
+    }
 }

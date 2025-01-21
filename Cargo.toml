@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+#custom version of sortedlist-rs, fix the bug of insert after remove all elements
+sortedlist-rs = { git = "https://github.com/VictorGerin/sortedlist-rs", version = "0.2.2"}
+
+[dev-dependencies]
+rand = "0.8.5"
 chrono = "0.4.39"
-sortedlist-rs = "0.2.2"

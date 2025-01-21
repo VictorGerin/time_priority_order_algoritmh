@@ -1,49 +1,46 @@
-use chrono::NaiveTime;
-
-use crate::Timed;
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-struct Obj {
-    start: NaiveTime,
-    end: NaiveTime,
-    description: String,
-    priority: i32,
-}
-
-impl Timed<NaiveTime> for Obj {
-    fn get_start(&self) -> NaiveTime {
-        self.start
-    }
-    fn get_end(&self) -> NaiveTime {
-        self.end
-    }
-    fn set_start(&mut self, time: NaiveTime) {
-        self.start = time;
-    }
-    fn set_end(&mut self, time: NaiveTime) {
-        self.end = time;
-    }
-}
-
-impl PartialEq for Obj {
-    fn eq(&self, other: &Self) -> bool {
-        self.priority == other.priority
-    }
-}
-
-impl PartialOrd for Obj {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.priority.cmp(&other.priority))
-    }
-}
-
-
 #[cfg(test)]
-mod tests {
-    use crate::time_order_by_priority;
-    use super::*;
+mod time_order_by_priority {
 
+    use chrono::NaiveTime;
+    use crate::{time_order_by_priority,Timed};
+
+    #[derive(Debug, Clone)]
+    #[allow(dead_code)]
+    struct Obj {
+        start: NaiveTime,
+        end: NaiveTime,
+        description: String,
+        priority: i32,
+    }
+
+    impl Timed<NaiveTime> for Obj {
+        fn get_start(&self) -> NaiveTime {
+            self.start
+        }
+        fn get_end(&self) -> NaiveTime {
+            self.end
+        }
+        fn set_start(&mut self, time: NaiveTime) {
+            self.start = time;
+        }
+        fn set_end(&mut self, time: NaiveTime) {
+            self.end = time;
+        }
+    }
+
+    impl PartialEq for Obj {
+        fn eq(&self, other: &Self) -> bool {
+            self.priority == other.priority
+        }
+    }
+
+    impl PartialOrd for Obj {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            Some(self.priority.cmp(&other.priority))
+        }
+    }
+
+    
     /// This test will check if the function time_order_by_priority will return the same object
     /// on the trivial case of the input having only one object the same object should be returned
     #[test]
@@ -334,16 +331,17 @@ mod tests {
     ///                           |-------------- C --------------|
     ///                                           |-------------- B --------------|
     ///   |-- F --|       |---------------------- A ----------------------|               |-- E --|
-    /// 11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:00
+    /// 11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
     /// 
     /// The expected result is:
     /// 
     ///   |-- F --|       |-- A --|-- C --|------ D ------|-- C --|------ B ------|       |-- E --|
-    /// 11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:00
+    /// 11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
     ///  
     #[test]
     fn test_complex_example()
     {
+        
         let prograns = vec![
             Obj {
                 start: "12:00:00".parse().unwrap(),
@@ -413,6 +411,38 @@ mod tests {
             priority: 3,
         });
 
+        let item = ordered.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "13:00:00".parse().unwrap(),
+            end: "14:00:00".parse().unwrap(),
+            description: "D".to_string(),
+            priority: 4,
+        });
 
+        let item = ordered.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "14:00:00".parse().unwrap(),
+            end: "14:30:00".parse().unwrap(),
+            description: "C".to_string(),
+            priority: 3,
+        });
+
+        let item = ordered.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "14:30:00".parse().unwrap(),
+            end: "15:30:00".parse().unwrap(),
+            description: "B".to_string(),
+            priority: 2,
+        });
+
+        let item = ordered.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "16:00:00".parse().unwrap(),
+            end: "16:30:00".parse().unwrap(),
+            description: "E".to_string(),
+            priority: 1,
+        });
+
+        assert_eq!(ordered.next(), None);
     }
 }
