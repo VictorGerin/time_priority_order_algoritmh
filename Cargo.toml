@@ -3,6 +3,10 @@ name = "time_priority_order_algoritmh"
 version = "0.1.0"
 edition = "2021"
 license-file = "LICENSE"
+exclude = [
+    ".gitignore",
+    ".vscode/*"
+]
 
 [dependencies]
 sortedlist-rs = { version = "0.2.3"}
