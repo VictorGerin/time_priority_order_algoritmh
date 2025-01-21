@@ -2,6 +2,7 @@
 name = "time_priority_order_algoritmh"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
 
 [dependencies]
 #custom version of sortedlist-rs, fix the bug of insert after remove all elements
