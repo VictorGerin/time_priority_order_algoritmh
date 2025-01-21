@@ -1,16 +1,18 @@
+pub mod test;
+
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc, vec};
 
 use sortedlist_rs::SortedList;
 
-pub trait Timed<T>
-where T: Ord + Copy
+pub trait Timed<U> : PartialOrd
+where U: PartialOrd + Copy
 {
-    fn get_start(&self) -> T;
-    fn get_end(&self) -> T;
-    fn set_start(&mut self, time: T);
-    fn set_end(&mut self, time: T);
-    fn get_priority(&self) -> u32;
+    fn get_start(&self) -> U;
+    fn get_end(&self) -> U;
+    fn set_start(&mut self, time: U);
+    fn set_end(&mut self, time: U);
 }
+#[derive(Debug)]
 struct ObjHolder<T> {
     obj: T,
     priority: usize,
@@ -18,7 +20,8 @@ struct ObjHolder<T> {
 
 impl<T> ObjHolder<T> {
     fn new(data: (usize, T)) -> RefObj<T> {
-        let (priority, obj) = data;
+        let (mut priority, obj) = data;
+        priority += 1;
         Rc::new(RefCell::new(Self {
             obj,
             priority,
@@ -32,6 +35,7 @@ impl<T> ObjHolder<T> {
  */
 type RefObj<T> = Rc<RefCell<ObjHolder<T>>>;
 
+#[derive(Debug)]
 enum TimedEvent<T, U> {
     Start{time: U,reference: RefObj<T>},
     End{time: U,reference: RefObj<T>},
@@ -42,7 +46,7 @@ where T: Timed<U> + Clone,
       U: Ord + Copy
 {
     //This sort by priority and create a new priority index to garantee priority uniqueness 
-    vec.sort_by(|a,b| a.get_priority().cmp(&b.get_priority()));
+    vec.sort_by(|a,b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Less));
 
     //wrap the object in a RefObj<T> to prevent unnecessary cloning
     vec.into_iter().enumerate().map(ObjHolder::new).collect()
@@ -109,8 +113,8 @@ fn process_end_case<T, U>(
     inter: &mut vec::IntoIter<TimedEvent<T, U>>,
     reference: RefObj<T>,
     time: U) 
-where T: Timed<U> + Clone,
-      U: Ord + Copy
+where T: Timed<U> + Clone + Debug,
+      U: Ord + Copy + Debug
 {
     if let Ok(index) = sorted_list.binary_search(&reference.borrow().priority) {
         sorted_list.remove(index);
@@ -122,18 +126,26 @@ where T: Timed<U> + Clone,
         temp_obj.borrow_mut().obj.set_end(time);
         result.push(temp_obj.borrow().obj.clone());
 
-        if let Some(last_item) = get_top(&*map_data, &*sorted_list) {
+        if let Some(last_item) = get_top(map_data, sorted_list) {
         
             *temp_obj = last_item.clone().into();
             temp_obj.borrow_mut().obj.set_start(time);
         
-        } else if let Some(next) = inter.next() {
+        } else if let Some(item) = inter.next() {
             //if finised the conflict and have more elements
 
-            match next {
+            println!("item {:?}\t{:?}", item, sorted_list);
+            match item {
                 TimedEvent::Start { reference , time } => {
                     *temp_obj = reference.clone();
                     temp_obj.borrow_mut().obj.set_start(time);
+                    
+                    map_data.insert(temp_obj.borrow().priority, temp_obj.clone());
+
+                    //looks like sorted_list has a bug when all elements is removed
+                    //For that a new list is created when the sorted list is empty
+                    *sorted_list = SortedList::new();
+                    sorted_list.insert(temp_obj.borrow().priority);
                 },
                 _ => {
                     //This panic should never happen
@@ -163,7 +175,7 @@ fn process_start_case<T,U>(
     reference: RefObj<T>, 
     time: U)
 where T: Timed<U> + Clone + Debug,
-        U: Ord + Copy
+        U: Ord + Copy + Debug
 {
     map_data.insert(reference.borrow().priority, reference.clone());
     sorted_list.insert(reference.borrow().priority);
@@ -219,11 +231,13 @@ U: Ord + Copy + Debug
         TimedEvent::End { time, reference: _ } => time
     });
 
+    println!("item {:?}\t{:?}", item, sorted_list);
     map_data.insert(temp_obj.borrow().priority, temp_obj.clone());
     sorted_list.insert(temp_obj.borrow().priority);
     
 
     while let Some(item) = inter.next() {
+        println!("item {:?}\t{:?}", item, sorted_list);
         match item {
             TimedEvent::Start { reference , time } => {
                 process_start_case(&mut result, &mut temp_obj, &mut sorted_list, &mut map_data, reference, time); 
