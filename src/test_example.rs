@@ -614,9 +614,4 @@ mod time_order_by_priority {
 
         assert_eq!(ordered.next(), None);
     }
-
-    #[test]
-    fn test_git_workflow() {
-        assert_eq!(1, 2);
-    }
 }
