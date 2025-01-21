@@ -5,7 +5,7 @@ edition = "2021"
 license-file = "LICENSE"
 
 [dependencies]
-sortedlist-rs = { git = "https://github.com/nicku12345/sortedlist-rs", version = "0.2.3"}
+sortedlist-rs = { version = "0.2.3"}
 
 [dev-dependencies]
 rand = "0.8.5"

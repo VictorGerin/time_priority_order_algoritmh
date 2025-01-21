@@ -213,7 +213,8 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "sortedlist-rs"
 version = "0.2.3"
-source = "git+https://github.com/nicku12345/sortedlist-rs#320199e89d12342226f784b8d3308d6196c636c4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "384b500ea8fe9deed2021da03a79def99e03a757cf6f27cedfa7755e3ee70a6f"
 
 [[package]]
 name = "syn"
