@@ -4,7 +4,7 @@ mod time_order_by_priority {
     use chrono::NaiveTime;
     use crate::{time_order_by_priority,Timed};
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     #[allow(dead_code)]
     struct Obj {
         start: NaiveTime,
@@ -28,21 +28,57 @@ mod time_order_by_priority {
         }
     }
 
-    impl PartialEq for Obj {
-        fn eq(&self, other: &Self) -> bool {
-            self.priority == other.priority
-        }
-    }
-
     impl PartialOrd for Obj {
         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
             Some(self.priority.cmp(&other.priority))
         }
     }
 
+    /// This will test if the tester object is working as expected for the test cases
+    #[test]
+    fn test_obj() {
+        let mut vec = vec![
+            Obj {
+                start: "12:00:00".parse().unwrap(),
+                end: "15:00:00".parse().unwrap(),
+                description: "A".to_string(),
+                priority: 1,
+            },
+            Obj {
+                start: "14:00:00".parse().unwrap(),
+                end: "16:00:00".parse().unwrap(),
+                description: "B".to_string(),
+                priority: 2,
+            },
+            Obj {
+                start: "12:00:00".parse().unwrap(),
+                end: "15:00:00".parse().unwrap(),
+                description: "A".to_string(),
+                priority: 1,
+            }
+        ];
+
+        assert_eq!(vec[0], vec[2]);
+        assert_ne!(vec[0], vec[1]);
+        assert_ne!(vec[2], vec[1]);
+
+        assert!(vec[0] < vec[1]);
+        assert!(vec[2] < vec[1]);
+
+        vec.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Less));
+
+        assert_eq!(vec[0], vec[1]);
+        assert_ne!(vec[0], vec[2]);
+        assert_ne!(vec[1], vec[2]);
+
+        assert!(vec[0] < vec[2]);
+        assert!(vec[1] < vec[2]);
+
+    }
+
     
     /// This test will check if the function time_order_by_priority will return the same object
-    /// on the trivial case of the input having only one object the same object should be returned
+    /// on the trivial case of the input having only one object. The same instace of object should be returned
     #[test]
     fn test_do_nothing() {
         let prograns = vec![
@@ -60,10 +96,11 @@ mod time_order_by_priority {
     }
 
     /// This test has 2 objects with a overlap of 1 hour (14:00 to 15:00)
+    /// 
     ///              | -------- B -------- |
     ///   | -------- A -------- |
     /// 
-    /// 12:00      14:00      15:00    16:00
+    /// 12:00      14:00      15:00      16:00
     /// 
     /// The expected result is:
     /// 
@@ -101,8 +138,14 @@ mod time_order_by_priority {
         assert!(obj.end == "16:00:00".parse().unwrap());
     }
 
-    /// Same as the test_simple_case but the priority is inverted so the expected result is:
+    /// Same as the test_simple_case but the priority is inverted
     /// 
+    ///   | -------- A -------- |
+    ///              | -------- B -------- |
+    /// 
+    /// 12:00      14:00      15:00      16:00
+    /// 
+    /// so the expected result is:
     ///   | -------- A -------- | -- B --- |
     /// 12:00      14:00      15:00      16:00
     #[test]
@@ -174,10 +217,11 @@ mod time_order_by_priority {
     }
 
 
-    /// This test has 2 objects with a overlap of 1 hour (14:00 to 15:00)
-    ///                                           | -------- C -------- |
+    /// This test has 2 objects with a overlap of 1 hour (14:00 to 15:00) and 
+    /// one object with no overlap
+    /// 
     ///              | -------- B -------- |
-    ///   | -------- A -------- |
+    ///   | -------- A -------- |                 | -------- C -------- |
     /// 
     /// 12:00      14:00      15:00      16:00  17:00                 18:00
     /// 
@@ -233,15 +277,14 @@ mod time_order_by_priority {
     /// and finish before the first one ends so the first one should be split in 2
     /// because the new program has a higher priority
     /// 
-    ///              | --- B -- |
-    ///   | -------------- A ------------- |
-    /// 
-    /// 12:00      14:00      13:00      18:00  
+    ///           |-- B --|
+    ///   |---------- A ----------|
+    /// 12:00   14:00   15:00   18:00  
     /// 
     /// The expected result is:
     /// 
-    ///   | -- A --- | -- B --- | --- A -- |
-    /// 12:00      14:00      15:00      18:00  
+    ///   |-- A --|-- B --|-- A --|
+    /// 12:00   14:00   15:00   18:00  
     ///
     #[test]
     fn test_a_program_in_the_middle_of_another() {
@@ -283,15 +326,14 @@ mod time_order_by_priority {
     /// Same as the test_a_program_in_the_middle_of_another but the priority is inverted so only the first
     /// program should be returned
     /// 
-    ///              | --- B -- |
-    ///   | -------------- A ------------- |
-    /// 
-    /// 12:00      14:00      13:00      18:00  
+    ///   |---------- A ----------|
+    ///           |-- B --|
+    /// 12:00   14:00   15:00   18:00  
     /// 
     /// The expected result is:
     /// 
-    ///   | -------------- A ------------- |
-    /// 12:00      14:00      13:00      18:00  
+    ///   |---------- A ----------|
+    /// 12:00   14:00   15:00   18:00  
     /// 
     #[test]
     fn test_a_program_in_the_middle_of_another_inverted() {
@@ -320,6 +362,91 @@ mod time_order_by_priority {
         assert!(obj.end == "18:00:00".parse().unwrap());
     }
 
+    /// This will test the case of a program starting on the same time another is finishing. 3 sub cases will be tested
+    /// A and B has sema priority, A has higher priority than B and last case B has higher priority than A
+    /// 
+    /// On all cases the expected result is the same and it should be equal to the input and no extra cases should be created
+    #[test]
+    fn test_non_overlap_case_with_same_start() {
+
+        let prograns = vec![
+            Obj {
+                start: "12:00:00".parse().unwrap(),
+                end: "13:00:00".parse().unwrap(),
+                description: "A".to_string(),
+                priority: 0,
+            },
+            Obj {
+                start: "13:00:00".parse().unwrap(),
+                end: "14:00:00".parse().unwrap(),
+                description: "B".to_string(),
+                priority: 0,
+            }
+        ];
+
+        let mut prograns = time_order_by_priority(prograns);
+
+        let mut iter = prograns.iter();
+        let item = iter.next().unwrap();
+
+        assert_eq!(item, &Obj {
+            start: "12:00:00".parse().unwrap(),
+            end: "13:00:00".parse().unwrap(),
+            description: "A".to_string(),
+            priority: 0,
+        });
+        let item = iter.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "13:00:00".parse().unwrap(),
+            end: "14:00:00".parse().unwrap(),
+            description: "B".to_string(),
+            priority: 0,
+        });
+        assert!(iter.next().is_none());
+
+        prograns.get_mut(0).unwrap().priority = 1;
+        let mut prograns = time_order_by_priority(prograns);
+
+        let mut iter = prograns.iter();
+        let item = iter.next().unwrap();
+
+        assert_eq!(item, &Obj {
+            start: "12:00:00".parse().unwrap(),
+            end: "13:00:00".parse().unwrap(),
+            description: "A".to_string(),
+            priority: 1,
+        });
+        let item = iter.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "13:00:00".parse().unwrap(),
+            end: "14:00:00".parse().unwrap(),
+            description: "B".to_string(),
+            priority: 0,
+        });
+        assert!(iter.next().is_none());
+        
+        prograns.get_mut(1).unwrap().priority = 2;
+        let prograns = time_order_by_priority(prograns);
+
+        let mut iter = prograns.iter();
+        let item = iter.next().unwrap();
+
+        assert_eq!(item, &Obj {
+            start: "12:00:00".parse().unwrap(),
+            end: "13:00:00".parse().unwrap(),
+            description: "A".to_string(),
+            priority: 1,
+        });
+        let item = iter.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "13:00:00".parse().unwrap(),
+            end: "14:00:00".parse().unwrap(),
+            description: "B".to_string(),
+            priority: 2,
+        });
+        assert!(iter.next().is_none());
+        
+    }
 
     /// Example most complex with prograns start and finish on the middle of other
     /// this shloud make comteplate all code path

@@ -18,31 +18,6 @@ struct ObjHolder<T> {
     priority: usize,
 }
 
-impl<T> PartialEq for ObjHolder<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.priority == other.priority
-    }
-    
-}
-
-impl<T> PartialOrd for ObjHolder<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.priority.partial_cmp(&other.priority)
-    }
-}
-
-impl<T> Eq for ObjHolder<T> {
-    fn assert_receiver_is_total_eq(&self) {
-        self.priority.assert_receiver_is_total_eq();
-    }
-}
-
-impl<T> Ord for ObjHolder<T> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.priority.cmp(&other.priority)
-    }
-    
-}
 impl<T> ObjHolder<T> {
     fn new(data: (usize, T)) -> RefObj<T> {
         let (mut priority, obj) = data;
@@ -51,6 +26,34 @@ impl<T> ObjHolder<T> {
             obj,
             priority,
         }))
+    }
+}
+
+impl<T> Eq for ObjHolder<T>
+where T: PartialEq
+{}
+
+impl<T> Ord for ObjHolder<T>
+where T: PartialOrd
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(&other).unwrap_or(std::cmp::Ordering::Less)
+    }
+}
+
+impl<T> PartialOrd for ObjHolder<T>
+where T: PartialOrd
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.priority.partial_cmp(&other.priority)
+    }
+}
+
+impl<T> PartialEq for ObjHolder<T>
+where T: PartialEq
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority
     }
 }
 
