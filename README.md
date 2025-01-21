@@ -22,6 +22,10 @@ The expected result is:
   11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
 ```
 
+## Todo
+
+1. Create a Benchmark and caracterize memory and time
+
 ## How works
 
 First any object has to define a start and finish mark for example Obj D above starts at 13:00 and 
