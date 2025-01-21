@@ -159,7 +159,7 @@ where T: Timed<U> + Clone,
 
                     //looks like sorted_list has a bug when all elements is removed
                     //For that a new list is created when the sorted list is empty
-                    // *sorted_list = SortedList::<usize>::new();
+                    *sorted_list = SortedList::<RefObj<T>>::new();
                     sorted_list.insert(temp_obj.clone());
                 },
                 _ => {
@@ -215,7 +215,7 @@ U: Ord + Copy
     
     let vec: Vec<RefObj<T>> = recreate_priority_index(vec);
 
-    let vec: Vec<TimedEvent<T, U>> = create_time_order_events(vec);
+    let time_line: Vec<TimedEvent<T, U>> = create_time_order_events(vec);
 
     //This vector will store the final result
     //Here is only place where the object is cloned
@@ -224,9 +224,9 @@ U: Ord + Copy
     let mut temp_obj: RefObj<T>;
 
     //sorted list to keep track of the keys on ordey by priorities
-    let mut sorted_list: SortedList<RefObj<T>> = SortedList::new();
+    let mut running_prograns: SortedList<RefObj<T>> = SortedList::new();
 
-    let mut inter = vec.into_iter();
+    let mut inter = time_line.into_iter();
 
     //unwrap is safe because we have at least 4 elements on the list
     //The algorithm only works with 2 or more Timed elements each create 2 points on the timeline
@@ -242,17 +242,17 @@ U: Ord + Copy
         TimedEvent::End { time, reference: _ } => time
     });
 
-    sorted_list.insert(temp_obj.clone());
+    running_prograns.insert(temp_obj.clone());
     
 
     while let Some(item) = inter.next() {
 
         match item {
             TimedEvent::Start { reference , time } => {
-                process_start_case(&mut result, &mut temp_obj, &mut sorted_list, reference, time); 
+                process_start_case(&mut result, &mut temp_obj, &mut running_prograns, reference, time); 
             },
             TimedEvent::End { reference , time } => {
-                process_end_case(&mut result, &mut temp_obj, &mut sorted_list, &mut inter, reference, time);
+                process_end_case(&mut result, &mut temp_obj, &mut running_prograns, &mut inter, reference, time);
             },
         }
     }

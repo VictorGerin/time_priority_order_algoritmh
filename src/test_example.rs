@@ -448,6 +448,48 @@ mod time_order_by_priority {
         
     }
 
+    /// This will test the case of 2 program start and stop exatly at the same time
+    /// this will create 2 programs one with full length and other with 0 length
+    /// the one with full length should have the higher priority
+    #[test]
+    fn test_start_and_finish_same_time() {
+        
+        let prograns = vec![
+            Obj {
+                start: "12:00:00".parse().unwrap(),
+                end: "13:00:00".parse().unwrap(),
+                description: "A".to_string(),
+                priority: 1,
+            },
+            Obj {
+                start: "12:00:00".parse().unwrap(),
+                end: "13:00:00".parse().unwrap(),
+                description: "B".to_string(),
+                priority: 0,
+            }
+        ];
+
+        let prograns = time_order_by_priority(prograns);
+        let mut iter = prograns.iter();
+        let item = iter.next().unwrap();
+
+        assert_eq!(item, &Obj {
+            start: "12:00:00".parse().unwrap(),
+            end: "12:00:00".parse().unwrap(),
+            description: "B".to_string(),
+            priority: 0,
+        });
+        let item = iter.next().unwrap();
+        assert_eq!(item, &Obj {
+            start: "12:00:00".parse().unwrap(),
+            end: "13:00:00".parse().unwrap(),
+            description: "A".to_string(),
+            priority: 1,
+        });
+        assert!(iter.next().is_none());
+
+
+    }
     /// Example most complex with prograns start and finish on the middle of other
     /// this shloud make comteplate all code path
     /// 
