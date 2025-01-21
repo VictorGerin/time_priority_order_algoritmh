@@ -5,8 +5,7 @@ edition = "2021"
 license-file = "LICENSE"
 
 [dependencies]
-#custom version of sortedlist-rs, fix the bug of insert after remove all elements
-sortedlist-rs = { git = "https://github.com/VictorGerin/sortedlist-rs", version = "0.2.2"}
+sortedlist-rs = { git = "https://github.com/nicku12345/sortedlist-rs", version = "0.2.3"}
 
 [dev-dependencies]
 rand = "0.8.5"

@@ -212,8 +212,8 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "sortedlist-rs"
-version = "0.2.2"
-source = "git+https://github.com/VictorGerin/sortedlist-rs#b4081c0fe6b591bef9b8e8cc1e64568f230e2a6e"
+version = "0.2.3"
+source = "git+https://github.com/nicku12345/sortedlist-rs#320199e89d12342226f784b8d3308d6196c636c4"
 
 [[package]]
 name = "syn"

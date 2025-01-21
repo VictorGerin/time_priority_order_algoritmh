@@ -1,6 +1,6 @@
 mod test_example;
 
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc, vec};
+use std::{cell::RefCell, fmt::Debug, rc::Rc, vec};
 
 use sortedlist_rs::SortedList;
 
@@ -18,6 +18,31 @@ struct ObjHolder<T> {
     priority: usize,
 }
 
+impl<T> PartialEq for ObjHolder<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority
+    }
+    
+}
+
+impl<T> PartialOrd for ObjHolder<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.priority.partial_cmp(&other.priority)
+    }
+}
+
+impl<T> Eq for ObjHolder<T> {
+    fn assert_receiver_is_total_eq(&self) {
+        self.priority.assert_receiver_is_total_eq();
+    }
+}
+
+impl<T> Ord for ObjHolder<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.priority.cmp(&other.priority)
+    }
+    
+}
 impl<T> ObjHolder<T> {
     fn new(data: (usize, T)) -> RefObj<T> {
         let (mut priority, obj) = data;
@@ -86,16 +111,6 @@ where T: Clone + Timed<U>,
     vec
 }
 
-//get the last element on the list
-fn get_top<T>(map: &HashMap::<usize, RefObj<T>>, keys: &SortedList::<usize>) -> Option<RefObj<T>> {
-    match keys.last() {
-        Some(key_index) => {
-            Some(map.get(key_index).unwrap().clone())
-        },
-        None => None
-    }
-}
-
 /**
  * On case of End is very similar to Start
  * 
@@ -110,17 +125,15 @@ fn get_top<T>(map: &HashMap::<usize, RefObj<T>>, keys: &SortedList::<usize>) -> 
 fn process_end_case<T, U>(
     result: &mut Vec<T>,
     temp_obj: &mut RefObj<T>,
-    sorted_list: &mut SortedList<usize>,
-    map_data: &mut HashMap<usize, RefObj<T>>,
+    sorted_list: &mut SortedList<RefObj<T>>,
     inter: &mut vec::IntoIter<TimedEvent<T, U>>,
     reference: RefObj<T>,
     time: U) 
 where T: Timed<U> + Clone,
       U: Ord + Copy
 {
-    if let Ok(index) = sorted_list.binary_search(&reference.borrow().priority) {
+    if let Ok(index) = sorted_list.binary_search(&reference) {
         sorted_list.remove(index);
-        map_data.remove(&reference.borrow().priority);
     }
 
     if reference.borrow().priority >= temp_obj.borrow().priority {
@@ -128,7 +141,7 @@ where T: Timed<U> + Clone,
         temp_obj.borrow_mut().obj.set_end(time);
         result.push(temp_obj.borrow().obj.clone());
 
-        if let Some(last_item) = get_top(map_data, sorted_list) {
+        if let Some(last_item) = sorted_list.last() {
         
             *temp_obj = last_item.clone().into();
             temp_obj.borrow_mut().obj.set_start(time);
@@ -140,13 +153,11 @@ where T: Timed<U> + Clone,
                 TimedEvent::Start { reference , time } => {
                     *temp_obj = reference.clone();
                     temp_obj.borrow_mut().obj.set_start(time);
-                    
-                    map_data.insert(temp_obj.borrow().priority, temp_obj.clone());
-
 
                     //looks like sorted_list has a bug when all elements is removed
                     //For that a new list is created when the sorted list is empty
-                    sorted_list.insert(temp_obj.borrow().priority);
+                    // *sorted_list = SortedList::<usize>::new();
+                    sorted_list.insert(temp_obj.clone());
                 },
                 _ => {
                     //This panic should never happen
@@ -171,15 +182,13 @@ where T: Timed<U> + Clone,
 fn process_start_case<T,U>(
     result: &mut Vec<T>, 
     temp_obj: &mut RefObj<T>, 
-    sorted_list: &mut SortedList<usize>, 
-    map_data: &mut HashMap<usize, RefObj<T>>, 
+    sorted_list: &mut SortedList<RefObj<T>>, 
     reference: RefObj<T>, 
     time: U)
 where T: Timed<U> + Clone,
         U: Ord + Copy
 {
-    map_data.insert(reference.borrow().priority, reference.clone());
-    sorted_list.insert(reference.borrow().priority);
+    sorted_list.insert(reference.clone());
 
     if reference.borrow().priority >= temp_obj.borrow().priority {
         temp_obj.borrow_mut().obj.set_end(time);
@@ -212,11 +221,9 @@ U: Ord + Copy
     let mut temp_obj: RefObj<T>;
 
     //sorted list to keep track of the keys on ordey by priorities
-    let mut sorted_list = SortedList::<usize>::new();
-    let mut map_data = HashMap::<usize, RefObj<T>>::new();
+    let mut sorted_list: SortedList<RefObj<T>> = SortedList::new();
 
     let mut inter = vec.into_iter();
-
 
     //unwrap is safe because we have at least 4 elements on the list
     //The algorithm only works with 2 or more Timed elements each create 2 points on the timeline
@@ -232,18 +239,17 @@ U: Ord + Copy
         TimedEvent::End { time, reference: _ } => time
     });
 
-    map_data.insert(temp_obj.borrow().priority, temp_obj.clone());
-    sorted_list.insert(temp_obj.borrow().priority);
+    sorted_list.insert(temp_obj.clone());
     
 
     while let Some(item) = inter.next() {
 
         match item {
             TimedEvent::Start { reference , time } => {
-                process_start_case(&mut result, &mut temp_obj, &mut sorted_list, &mut map_data, reference, time); 
+                process_start_case(&mut result, &mut temp_obj, &mut sorted_list, reference, time); 
             },
             TimedEvent::End { reference , time } => {
-                process_end_case(&mut result, &mut temp_obj, &mut sorted_list, &mut map_data, &mut inter, reference, time);
+                process_end_case(&mut result, &mut temp_obj, &mut sorted_list, &mut inter, reference, time);
             },
         }
     }
