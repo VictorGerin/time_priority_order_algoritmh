@@ -212,9 +212,9 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "sortedlist-rs"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "384b500ea8fe9deed2021da03a79def99e03a757cf6f27cedfa7755e3ee70a6f"
+checksum = "a04fb59551bb7ca7912f3efc9f830edd2e95d2802c04fac1870af64f0e221ee1"
 
 [[package]]
 name = "syn"
@@ -229,7 +229,7 @@ dependencies = [
 
 [[package]]
 name = "time_priority_order_algoritmh"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "rand",

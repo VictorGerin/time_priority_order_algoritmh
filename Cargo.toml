@@ -1,7 +1,7 @@
 [package]
 name = "time_priority_order_algoritmh"
 description = "This is an algorithm create a cronogram of action sorted by time of occurrence time avoiding time colisions."
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license-file = "LICENSE"
 exclude = [
@@ -17,7 +17,7 @@ keywords = ["time", "priority", "order", "algoritmh"]
 categories = ["algorithms"]
 
 [dependencies]
-sortedlist-rs = "^0.2.3"
+sortedlist-rs = "^0.2.4"
 
 [dev-dependencies]
 rand = "0.8.5"

@@ -226,9 +226,6 @@ where T: Timed<U> + Clone,
                     *temp_obj = reference.clone();
                     temp_obj.borrow_mut().obj.set_start(time);
 
-                    //looks like sorted_list has a bug when all elements is removed
-                    //For that a new list is created when the sorted list is empty
-                    *sorted_list = SortedList::<RefObj<T>>::new();
                     sorted_list.insert(temp_obj.clone());
                 },
                 _ => {
