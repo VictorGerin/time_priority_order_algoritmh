@@ -1,7 +1,7 @@
 [package]
 name = "time_priority_order_algoritmh"
 description = "This is an algorithm create a cronogram of action sorted by time of occurrence time avoiding time colisions."
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license-file = "LICENSE"
 exclude = [
