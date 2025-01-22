@@ -1,3 +1,72 @@
+
+//! ```text
+//!     # Time Priority Order (tpo)
+//!     
+//!     This is a algoritmh that I have think for create a cronogram of action sorted by start and finish time avoiding time colisions.
+//!     
+//!     ## Example
+//!     
+//!     This example is on "test_example.rs"
+//!     
+//!     On this example the priority is given by the height
+//! 
+//!                                         |------ D ------|
+//!                                 |-------------- C --------------|
+//!                                                 |-------------- B --------------|
+//!         |-- F --|       |---------------------- A ----------------------|               |-- E --|
+//!       11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
+//!     
+//!     The expected result is:
+//!     
+//!         |-- F --|       |-- A --|-- C --|------ D ------|-- C --|------ B ------|       |-- E --|
+//!       11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
+//!     
+//!     
+//!     ## Todo
+//!     
+//!     1. Create a Benchmark and caracterize memory and time
+//!     
+//!     ## How works
+//!     
+//!     First any object has to define a start and finish mark for example Obj D above starts at 13:00 and 
+//!     finish at 14:00 this temporal marks is called TimedEvent
+//!     
+//!     Then a vector of objects is transform in a vector of TimedEvent and them sorted, each TimedEvent still
+//!     has a reference for original object. This vector can be called of time_line.
+//!     
+//!     A running_prograns list is created empty this list will conteins the running prograns order by priority
+//!     
+//!     A temp object is create from the first TimedEvent on the time_line the start time is the time of 
+//!     the TimeEvent and the end time is not defined yet.
+//!     
+//!     Them tem temp obj is add to running_prograns, the first TimeEvent always is a StartTimeEvent
+//!     
+//!     *pseudo code*
+//!     
+//!     Them a loop starts, each loop can be a StartTimeEvent or EndTimeEvent
+//!     
+//!         if is a Start:
+//!             Put the loop item object on the running_prograns list order by his priority
+//!     
+//!             if the loop item has a object with more priority then the temp object :
+//!                 set the end time of temp object then put it on final result list
+//!                 and create a new temp object for the loop item
+//!     
+//!         if is a End:
+//!             Remove the loop item object of the running_prograns list
+//!     
+//!             if the loop item has a object with more or equals priority then the temp object :
+//!                 set the end time of temp object then put it on final result list
+//!     
+//!                 if the running_prograns list is not empty:
+//!                     temp object is the top of running_prograns
+//!                 
+//!                 if the running_prograns list is empty and time_line is not finish:
+//!                     temp object is the next item with it should be a StartTimeEvent
+//!                     and insert it on the running_prograns
+//!     
+//!     **After this the final result list should conteins the final list**
+
 mod test_example;
 
 use std::{cell::RefCell, fmt::Debug, rc::Rc, vec};
@@ -203,6 +272,99 @@ where T: Timed<U> + Clone,
 }
 
 
+/// A function to order a list of Timed objects by priority
+/// 
+/// # Example
+/// ### Example 1
+/// ```text
+/// Here the priority is represented by the height
+///                                     |------ D ------|
+///                             |-------------- C --------------|
+///                                             |-------------- B --------------|
+///     |-- F --|       |---------------------- A ----------------------|               |-- E --|
+///   11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
+/// 
+/// The expected result is:
+/// 
+///     |-- F --|       |-- A --|-- C --|------ D ------|-- C --|------ B ------|       |-- E --|
+///   11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
+/// ```
+/// ### Example 2
+/// ```text
+///     This test has 2 objects with a overlap of 1 hour (14:00 to 15:00)
+///     
+///                  | -------- B -------- |
+///       | -------- A -------- |
+///     
+///     12:00      14:00      15:00      16:00
+///     
+///     The expected result is:
+///     
+///       | --- A --- | -------- B -------- |
+///     12:00      14:00      15:00   16:00
+///     
+///     This because the object B has a higher priority than A
+/// ```
+/// ```rust
+///     use chrono::NaiveTime;
+///     use time_priority_order_algoritmh::{time_order_by_priority,Timed};
+/// 
+///     #[derive(Debug, Clone, PartialEq)]
+///     struct Obj {
+///         start: NaiveTime,
+///         end: NaiveTime,
+///         description: String,
+///         priority: i32,
+///     }
+///     
+///     impl Timed<NaiveTime> for Obj {
+///         fn get_start(&self) -> NaiveTime {
+///             self.start
+///         }
+///         fn get_end(&self) -> NaiveTime {
+///             self.end
+///         }
+///         fn set_start(&mut self, time: NaiveTime) {
+///             self.start = time;
+///         }
+///         fn set_end(&mut self, time: NaiveTime) {
+///             self.end = time;
+///         }
+///     }
+///     
+///     impl PartialOrd for Obj {
+///         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+///             Some(self.priority.cmp(&other.priority))
+///         }
+///     }
+/// 
+///     let prograns = vec![
+///         Obj {
+///             start: "12:00:00".parse().unwrap(),
+///             end: "15:00:00".parse().unwrap(),
+///             description: "A".to_string(),
+///             priority: 1,
+///         },
+///         Obj {
+///             start: "14:00:00".parse().unwrap(),
+///             end: "16:00:00".parse().unwrap(),
+///             description: "B".to_string(),
+///             priority: 2,
+///         }
+///     ];
+///     
+///     let ordered = time_order_by_priority(prograns);
+///     assert_eq!(ordered.len(), 2);
+///     let obj = ordered.get(0).unwrap();
+///     assert!(obj.description == "A");
+///     assert!(obj.start == "12:00:00".parse().unwrap());
+///     assert!(obj.end == "14:00:00".parse().unwrap());
+///     
+///     let obj = ordered.get(1).unwrap();
+///     assert!(obj.description == "B");
+///     assert!(obj.start == "14:00:00".parse().unwrap());
+///     assert!(obj.end == "16:00:00".parse().unwrap());
+/// ```
 pub fn time_order_by_priority<T, U>(vec: Vec::<T>) -> Vec::<T>
 where T: Timed<U> + Clone,
 U: Ord + Copy
