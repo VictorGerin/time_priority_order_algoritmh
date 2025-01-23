@@ -424,48 +424,52 @@ U: Ord + Copy
 mod test {
     use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
-    use crate::{recreate_priority_index, Timed};
+    use crate::{create_time_order_events, recreate_priority_index, Timed, TimedEvent};
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct Obj {
+        start: i32,
+        end: i32,
+        priority: i32,
+        other: i32,
+    }
+
+    impl Timed<i32> for Obj {
+        fn get_start(&self) -> i32 {
+            self.start
+        }
+        fn get_end(&self) -> i32 {
+            self.end
+        }
+        fn set_start(&mut self, time: i32) {
+            self.start = time;
+        }
+        fn set_end(&mut self, time: i32) {
+            self.end = time;
+        }
+    }
+
+    impl PartialOrd for Obj {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            if self.priority == other.priority {
+                return Some(self.other.cmp(&other.other))
+            }
+            Some(self.priority.cmp(&other.priority))
+        }
+    }
+
+    fn shuffle(vec: &mut Vec<Obj>) {
+        let options = [
+            std::cmp::Ordering::Less,
+            std::cmp::Ordering::Equal,
+            std::cmp::Ordering::Greater,
+        ];
+        let mut rng = StdRng::seed_from_u64(42);
+        vec.sort_by(|_,_| *options.choose(&mut rng).unwrap());
+    }
 
     #[test]
     fn test_recreate_priority_index() {
-
-        #[derive(Clone, Debug)]
-        struct Obj {
-            start: i32,
-            end: i32,
-            priority: i32,
-            other: i32,
-        }
-
-        impl Timed<i32> for Obj {
-            fn get_start(&self) -> i32 {
-                self.start
-            }
-            fn get_end(&self) -> i32 {
-                self.end
-            }
-            fn set_start(&mut self, time: i32) {
-                self.start = time;
-            }
-            fn set_end(&mut self, time: i32) {
-                self.end = time;
-            }
-        }
-
-        impl PartialEq for Obj {
-            fn eq(&self, other: &Self) -> bool {
-                self.priority == other.priority
-            }
-        }
-
-        impl PartialOrd for Obj {
-            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                if self.priority == other.priority {
-                    return Some(self.other.cmp(&other.other))
-                }
-                Some(self.priority.cmp(&other.priority))
-            }
-        }
 
         let mut vec = vec![
             Obj { start: 1, end: 2, priority: 20, other: 0 },
@@ -474,14 +478,8 @@ mod test {
             Obj { start: 0, end: 2, priority: 10, other: 1 },
             Obj { start: 1, end: 2, priority: 30, other: 0 },
         ];
-        let options = [
-            std::cmp::Ordering::Less,
-            std::cmp::Ordering::Equal,
-            std::cmp::Ordering::Greater,
-        ];
-        let mut rng = StdRng::seed_from_u64(42);
-        vec.sort_by(|_,_| *options.choose(&mut rng).unwrap());
 
+        shuffle(&mut vec);
         let vec = recreate_priority_index(vec);
         assert_eq!(vec.len(), 5);
 
@@ -508,6 +506,84 @@ mod test {
         let item = vec.next().unwrap();
         assert_eq!(item.borrow().obj.priority, 40);
         assert_eq!(item.borrow().priority, 5);
+
+    }
+
+    #[test]
+    fn test_create_time_order_events() {
+
+        let vec = vec![
+            Obj {
+                start: 1,
+                end: 10,
+                priority: 1,
+                other: 0
+            },
+            Obj {
+                start: 2,
+                end: 20,
+                priority: 1,
+                other: 1
+            },
+            Obj {
+                start: 3,
+                end: 30,
+                priority: 3,
+                other: 0
+            },
+        ];
+
+        let timed_events = create_time_order_events({
+            recreate_priority_index(vec.clone())
+        });
+
+        let get_time = |item: &TimedEvent<Obj, i32>| -> i32 {
+            match item {
+                TimedEvent::Start { time, reference: _ } => *time,
+                TimedEvent::End { time, reference: _ } => *time,
+            }
+        };
+
+        let get_ref = |item: &TimedEvent<Obj, i32>| {
+            match item {
+                TimedEvent::Start { time: _, reference } => reference.clone(),
+                TimedEvent::End { time: _, reference } => reference.clone(),
+            }
+        };
+
+        assert_eq!(timed_events.len(), 6);
+        let mut iter = timed_events.iter();
+
+        let item = iter.next().unwrap();
+        assert_eq!(get_time(item), 1);
+        assert_eq!(&(get_ref(item).borrow().obj), &vec[0]);
+
+
+        let item = iter.next().unwrap();
+        assert_eq!(get_time(item), 2);
+        assert_eq!(&(get_ref(item).borrow().obj), &vec[1]);
+
+
+        let item = iter.next().unwrap();
+        assert_eq!(get_time(item), 3);
+        assert_eq!(&(get_ref(item).borrow().obj), &vec[2]);
+
+
+        let item = iter.next().unwrap();
+        assert_eq!(get_time(item), 10);
+        assert_eq!(&(get_ref(item).borrow().obj), &vec[0]);
+
+
+        let item = iter.next().unwrap();
+        assert_eq!(get_time(item), 20);
+        assert_eq!(&(get_ref(item).borrow().obj), &vec[1]);
+
+
+        let item = iter.next().unwrap();
+        assert_eq!(get_time(item), 30);
+        assert_eq!(&(get_ref(item).borrow().obj), &vec[2]);
+
+        assert!(iter.next().is_none());
 
     }
 }
