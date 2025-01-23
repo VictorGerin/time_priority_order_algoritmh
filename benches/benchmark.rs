@@ -74,7 +74,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         create_test_data(size)
                     },
                     |vec| {
-                        time_order_by_priority(vec);
+                        let _ignored = time_order_by_priority(vec);
                     }, criterion::BatchSize::SmallInput);
             },
         );
