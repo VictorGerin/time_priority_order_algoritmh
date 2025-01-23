@@ -22,6 +22,20 @@ The expected result is:
   11:00   11:30   12:00   12:30   13:00   13:30   14:00   14:30   15:00   15:30   16:00   16:30
 ```
 
+## Benchmark
+
+A very nice beanchmark, show that the algorithm has a linear relation with the size of the input
+so a Big O complex of O(n)
+making a linear regration with this information gives 998.04 us / unit for my computer
+
+| qtd    | seconds     |
+|--------|-------------|
+| 10     | 2.5^10-6s   |
+| 100    | 26.331^10-6 |
+| 1000   | 387.97^10-6 |
+| 10000  | 5.9119^10-3 |
+| 100000 | 98.976^10-3 |
+
 ## Todo
 
 1. Create a Benchmark and caracterize memory and time
