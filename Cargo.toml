@@ -22,7 +22,7 @@ sortedlist-rs = "^0.2.4"
 [dev-dependencies]
 rand = "0.8.5"
 chrono = "0.4.39"
-criterion = "=0.5.1"
+criterion = {version = "=0.5.1", features = ["html_reports"]}
 
 
 [[bench]]
